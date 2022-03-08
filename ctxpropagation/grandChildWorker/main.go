@@ -1,8 +1,8 @@
 package main
 
+
 import (
 	"log"
-	"time"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/contrib/opentracing"
@@ -37,16 +37,13 @@ func main() {
 
 	w := worker.New(c, "ctx-propagation", worker.Options{
 		EnableLoggingInReplay: true,
-		StickyScheduleToStartTimeout:1000*time.Second,
-		WorkerStopTimeout:500*time.Second,
-
 	})
 
-	w.RegisterWorkflow(ctxpropagation.CtxPropWorkflow)
-	w.RegisterActivity(ctxpropagation.SampleActivity)
-	w.RegisterWorkflow(ctxpropagation.ChildWorkflowSample)
-	var hello ctxpropagation.HelloActivity
-	w.RegisterActivity(&hello)
+	var grandHello *ctxpropagation.GrandChildHelloActivity
+	w.RegisterWorkflow(ctxpropagation.GrandChildWorkflowSample)
+	w.RegisterActivity(grandHello.GrandMkDir1)
+
+
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

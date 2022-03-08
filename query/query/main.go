@@ -23,11 +23,14 @@ func main() {
 	}
 	defer c.Close()
 
-	resp, err := c.QueryWorkflow(context.Background(), workflowID, "", queryType)
+	//var num int
+	//num = 1
+	resp, err := c.QueryWorkflow(context.Background(), workflowID, "", queryType,"Joehanm'words")
 	if err != nil {
 		log.Fatalln("Unable to query workflow", err)
 	}
 	var result interface{}
+
 	if err := resp.Get(&result); err != nil {
 		log.Fatalln("Unable to decode query result", err)
 	}

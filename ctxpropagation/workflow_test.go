@@ -39,7 +39,7 @@ func (s *UnitTestSuite) Test_CtxPropWorkflow() {
 	var propagatedValue interface{}
 	env.SetOnActivityStartedListener(func(activityInfo *activity.Info, ctx context.Context, args converter.EncodedValues) {
 		// PropagateKey should be propagated by custom context propagator from propagationKey header.
-		propagatedValue = ctx.Value(PropagateKey)
+		propagatedValue = ctx.Value(LogIdPropagateKey)
 	})
 
 	env.ExecuteWorkflow(CtxPropWorkflow)

@@ -2,6 +2,7 @@ package helloworld
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/activity"
@@ -10,6 +11,11 @@ import (
 
 // Workflow is a Hello World workflow definition.
 func Workflow(ctx workflow.Context, name string) (string, error) {
+	attr1 := map[string]interface{}{
+		"name":  "Joehnam",
+		"age": 18,
+	}
+	workflow.UpsertSearchAttributes(ctx, attr1)
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 	}
@@ -33,5 +39,8 @@ func Workflow(ctx workflow.Context, name string) (string, error) {
 func Activity(ctx context.Context, name string) (string, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Activity", "name", name)
+	for i:=1;i<10;i++ {
+		fmt.Println("this is the 抛瓦")
+	}
 	return "Hello " + name + "!", nil
 }
