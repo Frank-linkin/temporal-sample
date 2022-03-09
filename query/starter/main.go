@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"time"
 
 	"go.temporal.io/sdk/client"
 
@@ -21,7 +22,10 @@ func main() {
 
 	workflowOptions := client.StartWorkflowOptions{
 		ID:        "query_workflow",
-		TaskQueue: "query",
+		TaskQueue: "DIYQuery",
+		WorkflowExecutionTimeout: 1000*time.Second,
+		WorkflowTaskTimeout: 1000*time.Second,
+		WorkflowRunTimeout: 1000*time.Second,
 	}
 
 	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, query.QueryWorkflow)

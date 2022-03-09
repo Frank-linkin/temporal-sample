@@ -39,9 +39,9 @@ func main() {
 		EnableLoggingInReplay: true,
 	})
 
-	var grandHello *ctxpropagation.GrandChildHelloActivity
-	w.RegisterWorkflow(ctxpropagation.GrandChildWorkflowSample)
-	w.RegisterActivity(grandHello.GrandMkDir1)
+	//var grandHello *ctxpropagation.GrandChildHelloActivity
+	//w.RegisterWorkflow(ctxpropagation.GrandChildWorkflowSample)
+	//w.RegisterActivity(grandHello.GrandMkDir1)
 
 
 

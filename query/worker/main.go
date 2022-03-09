@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"go.temporal.io/sdk/client"
 	"go.temporal.io/sdk/worker"
@@ -19,10 +20,15 @@ func main() {
 	}
 	defer c.Close()
 
-	w := worker.New(c, "query", worker.Options{})
+	w := worker.New(c, "DIYQuery", worker.Options{
+		EnableLoggingInReplay: true,
+		StickyScheduleToStartTimeout:1000*time.Second,
+		WorkerStopTimeout:500*time.Second,
+	})
 
 	w.RegisterWorkflow(query.QueryWorkflow)
-
+	var hello query.HelloActivity
+	w.RegisterActivity(&hello)
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
 		log.Fatalln("Unable to start worker", err)

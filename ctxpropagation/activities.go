@@ -3,9 +3,15 @@ package ctxpropagation
 import (
 	"context"
 	"fmt"
+	"reflect"
 )
 
 func SampleActivity(ctx context.Context) (*Values, error) {
+	ctxType:=reflect.TypeOf(ctx)
+	str:=ctxType.String()
+	name:=ctxType.Name()
+	fmt.Println(str)
+	fmt.Println(name)
 	if val := ctx.Value(LogIdPropagateKey); val != nil {
 		fmt.Println(val)
 	}

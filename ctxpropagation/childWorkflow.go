@@ -9,10 +9,8 @@ import (
 )
 
 func ChildWorkflowSample(ctx workflow.Context) error {
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 2 * time.Second, // such a short timeout to make sample fail over very fast
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+
+
 
 	//if val := ctx.Value(PropagateKey); val != nil {
 	//	vals := val.(Values)
@@ -29,6 +27,10 @@ func ChildWorkflowSample(ctx workflow.Context) error {
 	//	fmt.Printf("ChildWorkflow Key is : %v",vals.Key)
 	//	logger.Info("ChildWorkflow PropagateKey", "Key", vals.Key)
 	//}
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 2 * time.Second, // such a short timeout to make sample fail over very fast
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
 	var values Values
 	var helloActivity *HelloActivity
 	if err := workflow.ExecuteActivity(ctx, helloActivity.MkDir1,"strings").Get(ctx, &values); err != nil {

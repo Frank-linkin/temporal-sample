@@ -2,6 +2,7 @@ package ctxpropagation
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -9,6 +10,15 @@ import (
 
 // CtxPropWorkflow workflow definition
 func CtxPropWorkflow(ctx workflow.Context) (err error) {
+	ctxType:=reflect.TypeOf(ctx)
+	str:=ctxType.String()
+	name:=ctxType.Name()
+	fmt.Println(str)
+	fmt.Println(name)
+
+	nullValue :=ctx.Value("bucunzai")
+	fmt.Println(nullValue)
+
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 2 * time.Second, // such a short timeout to make sample fail over very fast
 	}
