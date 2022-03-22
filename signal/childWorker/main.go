@@ -1,0 +1,34 @@
+package main
+
+import (
+	signalDemo "github.com/temporalio/samples-go/signal"
+	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/worker"
+	"log"
+	"time"
+)
+
+func main() {
+	// The client and worker are heavyweight objects that should be created once per process.
+	c, err := client.NewClient(client.Options{
+		HostPort: client.DefaultHostPort,
+	})
+	if err != nil {
+		log.Fatalln("Unable to create client", err)
+	}
+	defer c.Close()
+
+	w := worker.New(c, "DIY-Signal-child", worker.Options{
+		EnableLoggingInReplay:        true,
+		StickyScheduleToStartTimeout: 1000 * time.Second,
+		WorkerStopTimeout:            500 * time.Second,
+	})
+
+	w.RegisterWorkflow(signalDemo.SignalWorkflow_child)
+	var hello signalDemo.HelloActivity_child
+	w.RegisterActivity(&hello)
+	err = w.Run(worker.InterruptCh())
+	if err != nil {
+		log.Fatalln("Unable to start worker", err)
+	}
+}

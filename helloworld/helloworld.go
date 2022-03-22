@@ -11,11 +11,6 @@ import (
 
 // Workflow is a Hello World workflow definition.
 func Workflow(ctx workflow.Context, name string) (string, error) {
-	attr1 := map[string]interface{}{
-		"name":  "Joehnam",
-		"age": 18,
-	}
-	workflow.UpsertSearchAttributes(ctx, attr1)
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 	}
@@ -25,7 +20,12 @@ func Workflow(ctx workflow.Context, name string) (string, error) {
 	logger.Info("HelloWorld workflow started", "name", name)
 
 	var result string
-	err := workflow.ExecuteActivity(ctx, Activity, name).Get(ctx, &result)
+	err := workflow.ExecuteActivity(ctx, Activity, "小张").Get(ctx, &result)
+	if err != nil {
+		logger.Error("Activity failed.", "Error", err)
+		return "", err
+	}
+	err = workflow.ExecuteActivity(ctx, Activity, "小明").Get(ctx, &result)
 	if err != nil {
 		logger.Error("Activity failed.", "Error", err)
 		return "", err
@@ -39,8 +39,7 @@ func Workflow(ctx workflow.Context, name string) (string, error) {
 func Activity(ctx context.Context, name string) (string, error) {
 	logger := activity.GetLogger(ctx)
 	logger.Info("Activity", "name", name)
-	for i:=1;i<10;i++ {
-		fmt.Println("this is the 抛瓦")
-	}
+	fmt.Printf("Activity is Running,name is %v ", name)
+	fmt.Println("this is the 抛瓦")
 	return "Hello " + name + "!", nil
 }
