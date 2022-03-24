@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -17,9 +18,10 @@ type (
 	// Statement is the building block of dsl workflow. A Statement can be a simple ActivityInvocation or it
 	// could be a Sequence or Parallel.
 	Statement struct {
-		Activity *ActivityInvocation
-		Sequence *Sequence
-		Parallel *Parallel
+		Childworkflow *ChildWorkflowInvocation
+		Activity      *ActivityInvocation
+		Sequence      *Sequence
+		Parallel      *Parallel
 	}
 
 	// Sequence consist of a collection of Statements that runs in sequential.
@@ -39,6 +41,18 @@ type (
 		Name      string
 		Arguments []string
 		Result    string
+		//SfChildWorkflowOpt{}配置文件的路径
+		//OptionPath string
+	}
+
+	ChildWorkflowInvocation struct {
+		Name      string
+		Arguments []string
+		Result    string
+		//考虑到Childworkflow执行的时候所有param来源于父workflow，不再从配置文件中获取信息，所以这里是Statement
+		Root Statement
+		//SfChildWorkflowOpt{}配置文件的路径
+		//OptionPath string
 	}
 
 	executable interface {
@@ -69,24 +83,57 @@ func SimpleDSLWorkflow(ctx workflow.Context, dslWorkflow Workflow) ([]byte, erro
 	return nil, err
 }
 
+func SimpleDSLWorkflowChild(ctx workflow.Context, root Statement, bindings map[string]int) (int, error) {
+	ao := workflow.ActivityOptions{
+		StartToCloseTimeout: 10 * time.Second,
+	}
+	ctx = workflow.WithActivityOptions(ctx, ao)
+	logger := workflow.GetLogger(ctx)
+
+	err := root.execute(ctx, bindings)
+	if err != nil {
+		logger.Error("DSL Workflow failed.", "Error", err)
+		return -1, err
+	}
+
+	//logger.Info("DSL Workflow completed.")
+	fmt.Printf("\nDSL-Child Workflow completed.\n")
+	return 100, err
+}
+
 func (b *Statement) execute(ctx workflow.Context, bindings map[string]int) error {
 	if b.Parallel != nil {
 		err := b.Parallel.execute(ctx, bindings)
 		if err != nil {
 			return err
 		}
+		//一个StateMent只允许是一种[ChildWorkflow,parallel,Sequence,Activity其中的一种]
+		return nil
 	}
 	if b.Sequence != nil {
 		err := b.Sequence.execute(ctx, bindings)
 		if err != nil {
 			return err
 		}
+		//一个StateMent只允许是一种[ChildWorkflow,parallel,Sequence,Activity其中的一种]
+		return nil
 	}
 	if b.Activity != nil {
 		err := b.Activity.execute(ctx, bindings)
 		if err != nil {
 			return err
 		}
+		//一个StateMent只允许是一种[ChildWorkflow,parallel,Sequence,Activity其中的一种]
+		return nil
+	}
+
+	if b.Childworkflow != nil {
+		err := b.Childworkflow.execute(ctx, bindings)
+		if err != nil {
+			return err
+		}
+		//一个StateMent只允许是一种[ChildWorkflow,parallel,Sequence,Activity其中的一种]
+		return nil
 	}
 	return nil
 }
@@ -95,6 +142,26 @@ func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]in
 	inputParam := makeInput(a.Arguments, bindings)
 	var result int
 	err := workflow.ExecuteActivity(ctx, a.Name, inputParam).Get(ctx, &result)
+	if err != nil {
+		return err
+	}
+	if a.Result != "" {
+		bindings[a.Result] = result
+	}
+	return nil
+}
+
+func (a ChildWorkflowInvocation) execute(ctx workflow.Context, bindings map[string]int) error {
+	//inputParam := makeInput(a.Arguments, bindings)
+	var result int
+	//配置的Option单独写yaml文件
+	//第三个参数必须是a.workflow
+	cwo := workflow.ChildWorkflowOptions{
+		TaskQueue:  "dsl",
+		WorkflowID: "DSL-Workflow",
+	}
+	ctx = workflow.WithChildOptions(ctx, cwo)
+	err := workflow.ExecuteChildWorkflow(ctx, a.Name, a.Root, bindings).Get(ctx, &result)
 	if err != nil {
 		return err
 	}

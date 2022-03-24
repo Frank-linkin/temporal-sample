@@ -23,6 +23,7 @@ func main() {
 
 	w.RegisterWorkflow(dsl.SimpleDSLWorkflow)
 	w.RegisterActivity(&dsl.SampleActivities{})
+	w.RegisterWorkflow(dsl.SimpleDSLWorkflowChild)
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {
