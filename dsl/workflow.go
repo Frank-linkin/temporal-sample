@@ -10,7 +10,7 @@ type (
 	// Workflow is the type used to express the workflow definition. Variables are a map of valuables. Variables can be
 	// used as input to Activity.
 	Workflow struct {
-		Variables map[string]string
+		Variables map[string]int
 		Root      Statement
 	}
 
@@ -42,13 +42,13 @@ type (
 	}
 
 	executable interface {
-		execute(ctx workflow.Context, bindings map[string]string) error
+		execute(ctx workflow.Context, bindings map[string]int) error
 	}
 )
 
 // SimpleDSLWorkflow workflow definition
 func SimpleDSLWorkflow(ctx workflow.Context, dslWorkflow Workflow) ([]byte, error) {
-	bindings := make(map[string]string)
+	bindings := make(map[string]int)
 	for k, v := range dslWorkflow.Variables {
 		bindings[k] = v
 	}
@@ -69,7 +69,7 @@ func SimpleDSLWorkflow(ctx workflow.Context, dslWorkflow Workflow) ([]byte, erro
 	return nil, err
 }
 
-func (b *Statement) execute(ctx workflow.Context, bindings map[string]string) error {
+func (b *Statement) execute(ctx workflow.Context, bindings map[string]int) error {
 	if b.Parallel != nil {
 		err := b.Parallel.execute(ctx, bindings)
 		if err != nil {
@@ -91,9 +91,9 @@ func (b *Statement) execute(ctx workflow.Context, bindings map[string]string) er
 	return nil
 }
 
-func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]string) error {
+func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]int) error {
 	inputParam := makeInput(a.Arguments, bindings)
-	var result string
+	var result int
 	err := workflow.ExecuteActivity(ctx, a.Name, inputParam).Get(ctx, &result)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]st
 	return nil
 }
 
-func (s Sequence) execute(ctx workflow.Context, bindings map[string]string) error {
+func (s Sequence) execute(ctx workflow.Context, bindings map[string]int) error {
 	for _, a := range s.Elements {
 		err := a.execute(ctx, bindings)
 		if err != nil {
@@ -114,7 +114,7 @@ func (s Sequence) execute(ctx workflow.Context, bindings map[string]string) erro
 	return nil
 }
 
-func (p Parallel) execute(ctx workflow.Context, bindings map[string]string) error {
+func (p Parallel) execute(ctx workflow.Context, bindings map[string]int) error {
 	//
 	// You can use the context passed in to activity as a way to cancel the activity like standard GO way.
 	// Cancelling a parent context will cancel all the derived contexts as well.
@@ -147,7 +147,7 @@ func (p Parallel) execute(ctx workflow.Context, bindings map[string]string) erro
 	return nil
 }
 
-func executeAsync(exe executable, ctx workflow.Context, bindings map[string]string) workflow.Future {
+func executeAsync(exe executable, ctx workflow.Context, bindings map[string]int) workflow.Future {
 	future, settable := workflow.NewFuture(ctx)
 	workflow.Go(ctx, func(ctx workflow.Context) {
 		err := exe.execute(ctx, bindings)
@@ -156,8 +156,8 @@ func executeAsync(exe executable, ctx workflow.Context, bindings map[string]stri
 	return future
 }
 
-func makeInput(argNames []string, argsMap map[string]string) []string {
-	var args []string
+func makeInput(argNames []string, argsMap map[string]int) []int {
+	var args []int
 	for _, arg := range argNames {
 		args = append(args, argsMap[arg])
 	}
