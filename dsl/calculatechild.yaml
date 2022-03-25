@@ -1,53 +1,15 @@
-#(2+3) + 2*(2+3) +4*(2+3)*2
-#注意yaml里面全小写了
+#计算(2+3) + 2*(2+3) +4*(2+3)*2
+#childWorkflow和Workflow执行的功能是一样的，都是计算上面的算术式子，childWorkflow多执行一个Activity5
 variables:
   arg1: 2
   arg2: 3
   arg3: 4
+  stu:
+    age: 18
+    name: 小明
 root:
   sequence:
     elements:
-      - childworkflow:
-          #Name就是ChildWorkflow的名字，必须对应上
-          name: SimpleDSLWorkflowChild
-          arguments:
-            - arg1
-            - arg2
-            - arg3
-          result: result100
-          root:
-            sequence:
-              elements:
-                - activity:
-                    name: SampleActivity1
-                    arguments:
-                      - arg1
-                      - arg2
-                    result: result101
-                - parallel:
-                    branches:
-                      - sequence:
-                          elements:
-                            - activity:
-                                name: SampleActivity2
-                                arguments:
-                                  - result101
-                                  - arg1
-                                result: result102
-                            - activity:
-                                name: SampleActivity3
-                                arguments:
-                                  - arg1
-                                  - arg3
-                                  - result101
-                                result: result103
-                - activity:
-                    name: SampleActivity4
-                    arguments:
-                      - result101
-                      - result102
-                      - result103
-                    result: result104
       - activity:
           name: SampleActivity1
           arguments:
@@ -61,8 +23,8 @@ root:
                   - activity:
                       name: SampleActivity2
                       arguments:
-                        - result1
                         - arg1
+                        - result1
                       result: result2
                   - activity:
                       name: SampleActivity3
@@ -78,3 +40,21 @@ root:
             - result2
             - result3
           result: result4
+      - childworkflow:
+          #Name就是ChildWorkflow的名字，必须对应上
+          name: SimpleDSLWorkflowChild
+          arguments:
+            - stu
+          result: result100
+          root:
+            sequence:
+              elements:
+                #childWorkflow执行Activity5，activity6
+                - activity:
+                    name: SampleActivity5
+                    result: result105
+                - activity:
+                    name: SampleActivity6
+                    arguments:
+                      - stu
+                    result: result106

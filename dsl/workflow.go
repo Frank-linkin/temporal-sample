@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"reflect"
 	"time"
 
 	"go.temporal.io/sdk/workflow"
@@ -11,7 +12,7 @@ type (
 	// Workflow is the type used to express the workflow definition. Variables are a map of valuables. Variables can be
 	// used as input to Activity.
 	Workflow struct {
-		Variables map[string]int
+		Variables map[string]interface{}
 		Root      Statement
 	}
 
@@ -41,8 +42,7 @@ type (
 		Name      string
 		Arguments []string
 		Result    string
-		//SfChildWorkflowOpt{}配置文件的路径
-		//OptionPath string
+		Option    *workflow.ActivityOptions
 	}
 
 	ChildWorkflowInvocation struct {
@@ -50,20 +50,20 @@ type (
 		Arguments []string
 		Result    string
 		//考虑到Childworkflow执行的时候所有param来源于父workflow，不再从配置文件中获取信息，所以这里是Statement
-		Root Statement
-		//SfChildWorkflowOpt{}配置文件的路径
-		//OptionPath string
+		Root   *Statement
+		Option *workflow.ChildWorkflowOptions
 	}
 
 	executable interface {
-		execute(ctx workflow.Context, bindings map[string]int) error
+		execute(ctx workflow.Context, bindings map[string]interface{}) error
 	}
 )
 
 // SimpleDSLWorkflow workflow definition
 func SimpleDSLWorkflow(ctx workflow.Context, dslWorkflow Workflow) ([]byte, error) {
-	bindings := make(map[string]int)
+	bindings := make(map[string]interface{})
 	for k, v := range dslWorkflow.Variables {
+		//存储到参数表bingdings里
 		bindings[k] = v
 	}
 
@@ -83,11 +83,10 @@ func SimpleDSLWorkflow(ctx workflow.Context, dslWorkflow Workflow) ([]byte, erro
 	return nil, err
 }
 
-func SimpleDSLWorkflowChild(ctx workflow.Context, root Statement, bindings map[string]int) (int, error) {
-	ao := workflow.ActivityOptions{
-		StartToCloseTimeout: 10 * time.Second,
-	}
-	ctx = workflow.WithActivityOptions(ctx, ao)
+//ChildWorkflow第二个参数必须为root
+//第三个参数固定为bindings，也就是参数表
+//后序把这两个参数放到ctx里
+func SimpleDSLWorkflowChild(ctx workflow.Context, root Statement, bindings map[string]interface{}, stu Student) (interface{}, error) {
 	logger := workflow.GetLogger(ctx)
 
 	err := root.execute(ctx, bindings)
@@ -101,7 +100,7 @@ func SimpleDSLWorkflowChild(ctx workflow.Context, root Statement, bindings map[s
 	return 100, err
 }
 
-func (b *Statement) execute(ctx workflow.Context, bindings map[string]int) error {
+func (b *Statement) execute(ctx workflow.Context, bindings map[string]interface{}) error {
 	if b.Parallel != nil {
 		err := b.Parallel.execute(ctx, bindings)
 		if err != nil {
@@ -138,40 +137,86 @@ func (b *Statement) execute(ctx workflow.Context, bindings map[string]int) error
 	return nil
 }
 
-func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]int) error {
-	inputParam := makeInput(a.Arguments, bindings)
-	var result int
-	err := workflow.ExecuteActivity(ctx, a.Name, inputParam).Get(ctx, &result)
+func (a ActivityInvocation) execute(ctx workflow.Context, bindings map[string]interface{}) error {
+	if a.Name == "SampleActivity6" {
+		fmt.Println(a.Name)
+	}
+	//没写配置就使用默认配置
+	defaultOption := workflow.ActivityOptions{
+		StartToCloseTimeout:    10 * time.Second,
+		ScheduleToCloseTimeout: 10 * time.Second,
+	}
+	var ao *workflow.ActivityOptions
+	if a.Option == nil {
+		ao = &defaultOption
+	} else {
+		ao = a.Option
+	}
+	ctx = workflow.WithActivityOptions(ctx, *ao)
+
+	parasList := makeInput(a.Arguments, bindings, false)
+	parasList[0] = reflect.ValueOf(ctx)
+	parasList[1] = reflect.ValueOf(a.Name)
+
+	future := ExecuteActivityDSL(parasList)
+	var result interface{}
+	err := future.Get(ctx, &result)
 	if err != nil {
 		return err
 	}
+	//配置了Result的Activity，其返回值放入参数表
 	if a.Result != "" {
 		bindings[a.Result] = result
 	}
+
+	//考虑future作为value传入binding参数表
+	//如果Activity1和Activity2并行执行，但Activity1需要使用Activity2的结果，但是是并行的，不知道是否执行完，所以需要使用future
+	//但这样又感觉与Parallel和Sequence机制重复了
+	//if a.Result!="" {
+	//	bindings[a.Result] = future
+	//}
 	return nil
 }
 
-func (a ChildWorkflowInvocation) execute(ctx workflow.Context, bindings map[string]int) error {
-	//inputParam := makeInput(a.Arguments, bindings)
-	var result int
-	//配置的Option单独写yaml文件
-	//第三个参数必须是a.workflow
-	cwo := workflow.ChildWorkflowOptions{
+func (a ChildWorkflowInvocation) execute(ctx workflow.Context, bindings map[string]interface{}) error {
+	if a.Root == nil {
+		//抛出错误，此ChilWorkflow缺少Root
+		fmt.Printf("childWorkflow %v 缺少root", a.Root)
+	}
+
+	paramsList := makeInput(a.Arguments, bindings, true)
+	paramsList[0] = reflect.ValueOf(ctx)
+	paramsList[1] = reflect.ValueOf(a.Name)
+	paramsList[2] = reflect.ValueOf((*a.Root))
+
+	var cwo *workflow.ChildWorkflowOptions
+	defaultCwo := workflow.ChildWorkflowOptions{
 		TaskQueue:  "dsl",
 		WorkflowID: "DSL-Workflow",
 	}
-	ctx = workflow.WithChildOptions(ctx, cwo)
-	err := workflow.ExecuteChildWorkflow(ctx, a.Name, a.Root, bindings).Get(ctx, &result)
+	//没有配置Option就加载默认的Option
+	if a.Option == nil {
+		cwo = &defaultCwo
+	} else {
+		cwo = a.Option
+	}
+
+	ctx = workflow.WithChildOptions(ctx, *cwo)
+	childFuture := ExecuteChildWorkflowDSL(paramsList)
+	var result interface{}
+	err := childFuture.Get(ctx, &result)
 	if err != nil {
 		return err
 	}
+
+	//配置了Result的ChildWorkflow，其返回值放入参数表
 	if a.Result != "" {
 		bindings[a.Result] = result
 	}
 	return nil
 }
 
-func (s Sequence) execute(ctx workflow.Context, bindings map[string]int) error {
+func (s Sequence) execute(ctx workflow.Context, bindings map[string]interface{}) error {
 	for _, a := range s.Elements {
 		err := a.execute(ctx, bindings)
 		if err != nil {
@@ -181,7 +226,7 @@ func (s Sequence) execute(ctx workflow.Context, bindings map[string]int) error {
 	return nil
 }
 
-func (p Parallel) execute(ctx workflow.Context, bindings map[string]int) error {
+func (p Parallel) execute(ctx workflow.Context, bindings map[string]interface{}) error {
 	//
 	// You can use the context passed in to activity as a way to cancel the activity like standard GO way.
 	// Cancelling a parent context will cancel all the derived contexts as well.
@@ -214,7 +259,7 @@ func (p Parallel) execute(ctx workflow.Context, bindings map[string]int) error {
 	return nil
 }
 
-func executeAsync(exe executable, ctx workflow.Context, bindings map[string]int) workflow.Future {
+func executeAsync(exe executable, ctx workflow.Context, bindings map[string]interface{}) workflow.Future {
 	future, settable := workflow.NewFuture(ctx)
 	workflow.Go(ctx, func(ctx workflow.Context) {
 		err := exe.execute(ctx, bindings)
@@ -223,10 +268,37 @@ func executeAsync(exe executable, ctx workflow.Context, bindings map[string]int)
 	return future
 }
 
-func makeInput(argNames []string, argsMap map[string]int) []int {
-	var args []int
-	for _, arg := range argNames {
-		args = append(args, argsMap[arg])
+func makeInput(argNames []string, argsMap map[string]interface{}, isChildWorkflow bool) []reflect.Value {
+	//给ctx,name留出空间
+	offset := 2
+	if isChildWorkflow {
+		offset = 4
+	}
+	args := make([]reflect.Value, len(argNames)+offset)
+
+	if isChildWorkflow {
+		bingdings := make(map[string]interface{})
+		for _, argName := range argNames {
+			bingdings[argName] = argsMap[argName]
+		}
+		args[3] = reflect.ValueOf(bingdings)
+	}
+	for i, arg := range argNames {
+		args[i+offset] = reflect.ValueOf(argsMap[arg])
 	}
 	return args
+}
+
+func ExecuteActivityDSL(paramList []reflect.Value) workflow.Future {
+	funcValue := reflect.ValueOf(workflow.ExecuteActivity)
+	futureValue := funcValue.Call(paramList)
+	future, _ := futureValue[0].Interface().(workflow.Future)
+	return future
+}
+
+func ExecuteChildWorkflowDSL(paramList []reflect.Value) workflow.ChildWorkflowFuture {
+	funcValue := reflect.ValueOf(workflow.ExecuteChildWorkflow)
+	futureValue := funcValue.Call(paramList)
+	future, _ := futureValue[0].Interface().(workflow.ChildWorkflowFuture)
+	return future
 }
