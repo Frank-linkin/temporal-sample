@@ -2,6 +2,7 @@ package interceptor
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"go.temporal.io/sdk/activity"
@@ -9,12 +10,14 @@ import (
 )
 
 func Workflow(ctx workflow.Context, name string) (string, error) {
+	fmt.Println("\nstart workflow\n")
+	logger := workflow.GetLogger(ctx)
+	logger.Info("start workflow")
 	ao := workflow.ActivityOptions{
 		StartToCloseTimeout: 10 * time.Second,
 	}
 	ctx = workflow.WithActivityOptions(ctx, ao)
 
-	logger := workflow.GetLogger(ctx)
 	logger.Info("HelloWorld workflow started", "name", name)
 
 	var result string

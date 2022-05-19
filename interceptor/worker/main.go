@@ -1,36 +1,29 @@
 package main
 
 import (
-	"context"
-	"log"
-	"time"
-
 	"github.com/temporalio/samples-go/interceptor"
-	"go.temporal.io/sdk/activity"
 	"go.temporal.io/sdk/client"
-	sdkinterceptor "go.temporal.io/sdk/interceptor"
+	sdkinterceptor "go.temporal.io/sdk/interceptors"
 	"go.temporal.io/sdk/worker"
-	"go.temporal.io/sdk/workflow"
+	"log"
 )
 
 func main() {
 	// The client and worker are heavyweight objects that should be created once per process.
-	c, err := client.NewClient(client.Options{})
+	c, err := client.NewClient(client.Options{
+		HostPort: "106.13.193.55:7233",
+	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
 	}
 	defer c.Close()
 
+	tracingInceptor := interceptor.NewTracingInterceptor()
+	signalInterceptor := interceptor.NewSignalInterceptor()
+	workerInterceptors := []sdkinterceptor.WorkflowInterceptor{tracingInceptor, signalInterceptor}
 	w := worker.New(c, "interceptor", worker.Options{
 		// Create interceptor that will put started time on the logger
-		Interceptors: []sdkinterceptor.WorkerInterceptor{interceptor.NewWorkerInterceptor(interceptor.InterceptorOptions{
-			GetExtraLogTagsForWorkflow: func(ctx workflow.Context) []interface{} {
-				return []interface{}{"WorkflowStartTime", workflow.GetInfo(ctx).WorkflowStartTime.Format(time.RFC3339)}
-			},
-			GetExtraLogTagsForActivity: func(ctx context.Context) []interface{} {
-				return []interface{}{"ActivityStartTime", activity.GetInfo(ctx).StartedTime.Format(time.RFC3339)}
-			},
-		})},
+		WorkflowInterceptorChainFactories: workerInterceptors,
 	})
 
 	w.RegisterWorkflow(interceptor.Workflow)

@@ -2,15 +2,22 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/temporalio/samples-go/interceptor"
 	"go.temporal.io/sdk/client"
+	"go.temporal.io/sdk/metrics"
 )
 
 func main() {
+	metricsScope, metricsScopeCloser, metricsReporter := metrics.NewTaggedMetricsScope()
+
 	// The client is a heavyweight object that should be created once per process.
-	c, err := client.NewClient(client.Options{})
+	c, err := client.NewClient(client.Options{
+		HostPort:     "106.13.193.55:7233",
+		MetricsScope: metricsScope,
+	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
 	}
@@ -35,4 +42,7 @@ func main() {
 		log.Fatalln("Unable get workflow result", err)
 	}
 	log.Println("Workflow result:", result)
+	//start report
+	fmt.Printf("count=%v", metricsReporter.Counts())
+	metricsScopeCloser.Close()
 }

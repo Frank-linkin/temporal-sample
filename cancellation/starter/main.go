@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"log"
+	"time"
 
 	"go.temporal.io/sdk/client"
 
@@ -26,8 +27,9 @@ func main() {
 	defer c.Close()
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:        workflowID,
-		TaskQueue: "cancel-activity",
+		ID:                       workflowID,
+		TaskQueue:                "cancel-activity",
+		WorkflowExecutionTimeout: 300 * time.Second,
 	}
 
 	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, cancellation.YourWorkflow)

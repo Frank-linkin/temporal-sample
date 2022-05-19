@@ -13,7 +13,7 @@ import (
 func main() {
 	// The client and worker are heavyweight objects that should be created once per process.
 	c, err := client.NewClient(client.Options{
-		HostPort: client.DefaultHostPort,
+		HostPort: "106.13.193.55:7233",
 	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
@@ -21,9 +21,9 @@ func main() {
 	defer c.Close()
 
 	w := worker.New(c, "DIYQuery", worker.Options{
-		EnableLoggingInReplay: true,
-		StickyScheduleToStartTimeout:1000*time.Second,
-		WorkerStopTimeout:500*time.Second,
+		EnableLoggingInReplay:        true,
+		StickyScheduleToStartTimeout: 1000 * time.Second,
+		WorkerStopTimeout:            500 * time.Second,
 	})
 
 	w.RegisterWorkflow(query.QueryWorkflow)

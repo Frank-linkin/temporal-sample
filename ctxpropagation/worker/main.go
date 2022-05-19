@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/contrib/opentracing"
-	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
@@ -19,16 +17,16 @@ func main() {
 	defer func() { _ = closer.Close() }()
 
 	// Create interceptor
-	tracingInterceptor, err := opentracing.NewInterceptor(opentracing.TracerOptions{})
-	if err != nil {
-		log.Fatalf("Failed creating interceptor: %v", err)
-	}
+	//tracingInterceptor, err := opentracing.NewInterceptor(opentracing.TracerOptions{})
+	//if err != nil {
+	//	log.Fatalf("Failed creating interceptor: %v", err)
+	//}
 
 	// The client and worker are heavyweight objects that should be created once per process.
 	c, err := client.NewClient(client.Options{
 		HostPort:           client.DefaultHostPort,
 		ContextPropagators: []workflow.ContextPropagator{ctxpropagation.NewContextPropagator()},
-		Interceptors:       []interceptor.ClientInterceptor{tracingInterceptor},
+		//	Interceptors:       []interceptor.ClientInterceptor{tracingInterceptor},
 	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
@@ -36,10 +34,9 @@ func main() {
 	defer c.Close()
 
 	w := worker.New(c, "ctx-propagation", worker.Options{
-		EnableLoggingInReplay: true,
-		StickyScheduleToStartTimeout:1000*time.Second,
-		WorkerStopTimeout:500*time.Second,
-
+		EnableLoggingInReplay:        true,
+		StickyScheduleToStartTimeout: 1000 * time.Second,
+		WorkerStopTimeout:            500 * time.Second,
 	})
 
 	w.RegisterWorkflow(ctxpropagation.CtxPropWorkflow)

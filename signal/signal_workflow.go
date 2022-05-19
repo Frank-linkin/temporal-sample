@@ -49,7 +49,7 @@ func SignalWorkflow(ctx workflow.Context) error {
 		return err
 	}
 	_ = workflow.NewTimer(ctx, time.Second*5).Get(ctx, nil)
-	//selector.Select(ctx)
+	selector.Select(ctx)
 
 	fmt.Printf("\nroot workflow finished")
 

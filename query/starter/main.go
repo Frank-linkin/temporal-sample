@@ -13,7 +13,7 @@ import (
 func main() {
 	// The client is a heavyweight object that should be created once per process.
 	c, err := client.NewClient(client.Options{
-		HostPort: client.DefaultHostPort,
+		HostPort: "106.13.193.55:7233",
 	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
@@ -21,11 +21,11 @@ func main() {
 	defer c.Close()
 
 	workflowOptions := client.StartWorkflowOptions{
-		ID:        "query_workflow",
-		TaskQueue: "DIYQuery",
-		WorkflowExecutionTimeout: 1000*time.Second,
-		WorkflowTaskTimeout: 1000*time.Second,
-		WorkflowRunTimeout: 1000*time.Second,
+		ID:                       "query_workflow",
+		TaskQueue:                "DIYQuery",
+		WorkflowExecutionTimeout: 1000 * time.Second,
+		WorkflowTaskTimeout:      1000 * time.Second,
+		WorkflowRunTimeout:       1000 * time.Second,
 	}
 
 	we, err := c.ExecuteWorkflow(context.Background(), workflowOptions, query.QueryWorkflow)

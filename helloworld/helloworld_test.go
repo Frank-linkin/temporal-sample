@@ -15,7 +15,6 @@ func Test_Workflow(t *testing.T) {
 
 	// Mock activity implementation
 	env.OnActivity(Activity, mock.Anything, "Temporal").Return("Hello Temporal!", nil)
-
 	env.ExecuteWorkflow(Workflow, "Temporal")
 
 	require.True(t, env.IsWorkflowCompleted())

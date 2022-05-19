@@ -1,12 +1,9 @@
 package main
 
-
 import (
 	"log"
 
 	"go.temporal.io/sdk/client"
-	"go.temporal.io/sdk/contrib/opentracing"
-	"go.temporal.io/sdk/interceptor"
 	"go.temporal.io/sdk/worker"
 	"go.temporal.io/sdk/workflow"
 
@@ -19,16 +16,16 @@ func main() {
 	defer func() { _ = closer.Close() }()
 
 	// Create interceptor
-	tracingInterceptor, err := opentracing.NewInterceptor(opentracing.TracerOptions{})
-	if err != nil {
-		log.Fatalf("Failed creating interceptor: %v", err)
-	}
+	//tracingInterceptor, err := opentracing.NewInterceptor(opentracing.TracerOptions{})
+	//if err != nil {
+	//	log.Fatalf("Failed creating interceptor: %v", err)
+	//}
 
 	// The client and worker are heavyweight objects that should be created once per process.
 	c, err := client.NewClient(client.Options{
 		HostPort:           client.DefaultHostPort,
 		ContextPropagators: []workflow.ContextPropagator{ctxpropagation.NewContextPropagator()},
-		Interceptors:       []interceptor.ClientInterceptor{tracingInterceptor},
+		//Interceptors:       []interceptor.ClientInterceptor{tracingInterceptor},
 	})
 	if err != nil {
 		log.Fatalln("Unable to create client", err)
@@ -42,8 +39,6 @@ func main() {
 	//var grandHello *ctxpropagation.GrandChildHelloActivity
 	//w.RegisterWorkflow(ctxpropagation.GrandChildWorkflowSample)
 	//w.RegisterActivity(grandHello.GrandMkDir1)
-
-
 
 	err = w.Run(worker.InterruptCh())
 	if err != nil {

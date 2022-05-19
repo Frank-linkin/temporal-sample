@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"fmt"
+	"github.com/temporalio/samples-go/helloworld"
 	"go.temporal.io/sdk/workflow"
 	"time"
 )
@@ -18,16 +19,10 @@ func QueryWorkflow(ctx workflow.Context) error {
 	logger := workflow.GetLogger(ctx)
 	logger.Info("QueryWorkflow started")
 	// setup query handler for query type "state"
-	err := workflow.SetQueryHandler(ctx, "state", func(str string) (string ,error) {
+	err := workflow.SetQueryHandler(ctx, "myQueryType", func(param helloworld.Param) (string, error) {
 		var res string
 
-		attr1 := map[string]interface{}{
-			"CustomIntField": 15,
-			"CustomKeywordField": "seattle",
-		}
-		workflow.UpsertSearchAttributes(ctx, attr1)
-		fmt.Printf("++++++joehanms is : %v",str)
-		res = queryResult
+		res = "this is query result"
 		return res, nil
 	})
 	if err != nil {
@@ -45,7 +40,7 @@ func QueryWorkflow(ctx workflow.Context) error {
 	ctx = workflow.WithActivityOptions(ctx, ao)
 	var values string
 	var helloActivity *HelloActivity
-	if err := workflow.ExecuteActivity(ctx, helloActivity.MkDir1,"strings").Get(ctx, &values); err != nil {
+	if err := workflow.ExecuteActivity(ctx, helloActivity.MkDir1, "strings").Get(ctx, &values); err != nil {
 		workflow.GetLogger(ctx).Error(" Activity failed.", "Error", err)
 		return err
 	}
@@ -61,12 +56,11 @@ func QueryWorkflow(ctx workflow.Context) error {
 	return nil
 }
 
-
 type HelloActivity struct {
 }
 
 //func (a *RollbackActivity) MkDir1(ctx workflow.Context, fileDir string) error {
-func (a *HelloActivity) MkDir1(ctx context.Context,fileDir string) error {
+func (a *HelloActivity) MkDir1(ctx context.Context, fileDir string) error {
 	// return sangfor.NewError("Error message of Mine", "MyErrorTypeInactivity", nil, &sangfor.ErrResp{123})
 	//attr1 := map[string]interface{}{
 	//	"CustomIntField":  77,
@@ -75,7 +69,7 @@ func (a *HelloActivity) MkDir1(ctx context.Context,fileDir string) error {
 	//context := ctx.(workflow.Context)
 	//
 	//workflow.UpsertSearchAttributes(context, attr1)
-	for i:=0;i<=1000000000;i++{
+	for i := 0; i <= 1000000000; i++ {
 		//fmt.Println("this is Acitvity")
 	}
 	return nil
